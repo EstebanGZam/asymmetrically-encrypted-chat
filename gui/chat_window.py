@@ -342,6 +342,13 @@ class ChatWindow:
         if not message:
             return
         
+        # Handle quit command
+        if message.lower() == 'quit':
+            self.add_system_message("👋 Cerrando chat...")
+            self.root.after(1000, self.on_closing)  # Close after 1 second
+            self.message_entry.delete(0, tk.END)
+            return
+        
         try:
             # Send through client
             success = self.client.send_message(message)
