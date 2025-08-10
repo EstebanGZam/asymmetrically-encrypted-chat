@@ -18,14 +18,27 @@ Este proyecto implementa un sistema de comunicación seguro end-to-end entre dos
 - **Clientes independientes**: Generación y gestión local de llaves criptográficas
 - **Comunicación TCP/IP**: Protocolo confiable para el transporte de datos
 
+### Interfaz de Usuario
+
+- **Interfaz gráfica moderna**: GUI elegante con tema oscuro profesional
+- **Interfaz de línea de comandos**: Terminal tradicional para usuarios avanzados
+- **Monitoreo del servidor**: Ventana dedicada para supervisar conexiones y actividad
+- **Indicadores de seguridad**: Estado visual del cifrado y verificación de identidad
+
 ## Estructura del Proyecto
 
 ```
 asymmetrically-encrypted-chat/
 ├── crypto_utils.py     # Módulo de utilidades criptográficas
-├── server.py           # Servidor relay para comunicaciones
-├── client.py           # Cliente de chat seguro
-├── main.py             # Punto de entrada principal
+├── main_gui.py         # Punto de entrada principal (GUI)
+├── gui_client.py       # Adaptador para GUI de cliente de chat seguro
+├── gui_server.py       # Adaptador para GUI de servidor relay para comunicaciones
+├── gui/                # Módulo de interfaz gráfica
+│   ├── __init__.py     # Inicialización del módulo
+│   ├── main_window.py  # Ventana principal de la aplicación
+│   ├── chat_window.py  # Interfaz de chat con indicadores de seguridad
+│   ├── server_window.py# Monitor del servidor con logs en tiempo real
+│   └── styles.py       # Tema moderno y componentes estilizados
 ├── requirements.txt    # Dependencias del proyecto
 └── README.md           # Documentación del proyecto
 ```
@@ -36,8 +49,26 @@ asymmetrically-encrypted-chat/
 
 - Python 3.8 o superior
 - Biblioteca `cryptography` versión 41.0.0 o superior
+- `tkinter` (incluido por defecto en la mayoría de instalaciones de Python)
 
 ### Instalación de Dependencias
+
+Si tkinter NO está instalado:
+
+- Windows: tkinter viene incluido con Python. Durante la instalación de Python, marcar la opción "Tcl/Tk and IDLE"
+- macOS: tkinter viene incluido por defecto. Si es necesario instalarlo manualmente:
+
+```bash
+brew install python-tk
+```
+
+- Linux (Ubuntu/Debian):
+
+```bash
+sudo apt install python3-tk
+```
+
+Luego, se procede a instalar las demás depedencias:
 
 ```bash
 pip install -r requirements.txt
@@ -45,21 +76,23 @@ pip install -r requirements.txt
 
 ## Uso del Sistema
 
-### 1. Inicialización del Servidor
+### Interfaz Gráfica
 
-Ejecutar en una terminal dedicada:
-
-```bash
-python3 main.py server
-```
-
-### 2. Conexión de Clientes
-
-En terminales separadas para cada usuario:
+#### Ejecución de la aplicación GUI
 
 ```bash
-python3 main.py
+python main_gui.py
 ```
+
+#### Flujo de uso con interfaz gráfica:
+
+1. **Iniciar el servidor**: Clic en el botón "🚀 Iniciar Servidor" en la ventana principal
+2. **Conectar primer cliente**: Ingresar nombre de usuario y clic en "🔗 Conectar como Cliente"
+3. **Conectar segundo cliente**: Repetir el proceso en otra instancia de la aplicación
+4. **Verificar identidad**: Cuando aparezca el fingerprint del contacto, verificarlo por un canal seguro independiente
+5. **Confirmar verificación**: Clic en "✅ Verificar Identidad" para establecer el canal seguro
+6. **Comunicación segura**: Enviar mensajes cifrados end-to-end
+
 
 ## Protocolo de Comunicación Segura
 
@@ -71,11 +104,18 @@ python3 main.py
 4. **Verificación de Identidad**: Los usuarios verifican los fingerprints SHA-256 a través de un canal seguro alternativo
 5. **Comunicación Cifrada**: Los mensajes se cifran con la llave pública del destinatario y se firman con la llave privada del remitente
 
-### Comandos Disponibles
+### Comandos Disponibles (Terminal)
 
 - `verify`: Confirma la verificación del fingerprint del contacto
 - `quit`: Termina la sesión de chat de forma segura
 - Cualquier otro texto: Envía un mensaje cifrado y firmado
+
+### Características de la GUI
+
+- **Indicadores visuales de seguridad**: Estado del cifrado y verificación de identidad
+- **Monitor del servidor**: Logs en tiempo real, contador de clientes y mensajes
+- **Verificación simplificada**: Botón dedicado para confirmar la identidad del contacto
+- **Tema moderno**: Interfaz oscura profesional con elementos visuales intuitivos
 
 ## Garantías de Seguridad
 
@@ -125,6 +165,15 @@ Los mensajes intercambiados incluyen:
 - Timestamp de envío
 - Identificación del remitente
 
+### Arquitectura de la GUI
+
+La interfaz gráfica utiliza:
+
+- **tkinter**: Framework GUI nativo de Python para máxima compatibilidad
+- **Threading**: Operaciones de red no bloqueantes para mantener la responsividad
+- **Patrón Observer**: Callbacks para comunicación entre lógica y interfaz
+- **Separación de responsabilidades**: Adaptadores GUI que no modifican el código original
+
 ## Personalización y Extensiones
 
 ### Configuración de Red
@@ -144,6 +193,12 @@ Los mensajes intercambiados incluyen:
 - Implementar salas de chat grupales
 - Agregar persistencia de mensajes cifrados
 
+### Personalización de la GUI
+
+- Modificar tema de colores en `gui/styles.py`
+- Ajustar tipografías y espaciados
+- Agregar funcionalidades adicionales en las ventanas existentes
+
 ## Resolución de Problemas
 
 ### Problemas Comunes
@@ -151,6 +206,7 @@ Los mensajes intercambiados incluyen:
 - **Error de conexión**: Verificar que el servidor esté ejecutándose y el puerto esté disponible
 - **Fallo en intercambio de llaves**: Asegurar que ambos clientes estén conectados simultáneamente
 - **Firma inválida**: Verificar integridad de la conexión y validez de las llaves públicas
+- **GUI no se inicia**: Verificar que tkinter esté instalado correctamente
 
 ### Logs y Depuración
 
@@ -160,6 +216,8 @@ El sistema proporciona logs detallados de:
 - Intercambio de llaves públicas
 - Retransmisión de mensajes cifrados
 - Errores de comunicación
+
+La interfaz gráfica incluye un monitor en tiempo real que muestra toda la actividad del servidor.
 
 ## Cumplimiento y Estándares
 
