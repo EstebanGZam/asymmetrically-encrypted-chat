@@ -1,4 +1,4 @@
-# client.py - Secure chat client
+# gui_client.py - GUI adaptation of secure chat client
 import socket
 import threading
 import json
@@ -6,28 +6,27 @@ import time
 from datetime import datetime
 from crypto_utils import CryptoManager
 
-class SecureChatClient:
-    def __init__(self, username):
+class GUISecureChatClient:
+    def __init__(self, username, gui_callback=None):
         self.username = username
         self.crypto = CryptoManager()
         self.socket = None
         self.connected = False
         self.peer_username = None
+        self.gui_callback = gui_callback
         
     def connect(self, host='localhost', port=8888):
         """Connect to server and register user"""
         try:
             # Generate keypair
-            print("🔐 Generando par de llaves RSA...")
             self.crypto.generate_keypair()
             
-            # Show our public key fingerprint
+            # Get fingerprint
             fingerprint = self.crypto.get_public_key_fingerprint()
-            print(f"🔍 Tu fingerprint de llave pública:")
-            print(f"    {fingerprint}")
             
             # Connect to server
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(10)  # 10 second timeout
             self.socket.connect((host, port))
             
             # Register user by sending public key
@@ -37,23 +36,31 @@ class SecureChatClient:
             }
             self.socket.send(json.dumps(register_data).encode('utf-8'))
             
-            # FIX: Set connected BEFORE starting the thread to avoid race condition
+            # Set connected BEFORE starting the thread
             self.connected = True
             
             # Start receive thread
-            receive_thread = threading.Thread(target=self.receive_messages)
-            receive_thread.daemon = True
+            receive_thread = threading.Thread(target=self.receive_messages, daemon=True)
             receive_thread.start()
             
-            print(f"✅ Conectado como {self.username}")
+            # Notify GUI
+            if self.gui_callback:
+                self.gui_callback("status", {"message": f"Conectado como {self.username}"})
+                self.gui_callback("status", {"message": f"Tu fingerprint: {fingerprint}"})
+            
+            return True
             
         except Exception as e:
-            print(f"❌ Error de conexión: {e}")
+            self.connected = False
+            if self.gui_callback:
+                self.gui_callback("error", f"Error de conexión: {e}")
+            return False
     
     def receive_messages(self):
         """Thread to receive messages from server"""
         while self.connected:
             try:
+                self.socket.settimeout(1)  # Short timeout for responsiveness
                 data = self.socket.recv(4096).decode('utf-8')
                 if not data:
                     break
@@ -61,9 +68,11 @@ class SecureChatClient:
                 message = json.loads(data)
                 self.handle_received_message(message)
                 
+            except socket.timeout:
+                continue
             except Exception as e:
-                if self.connected:
-                    print(f"❌ Error recibiendo mensaje: {e}")
+                if self.connected and self.gui_callback:
+                    self.gui_callback("error", f"Error recibiendo mensaje: {e}")
                 break
     
     def handle_received_message(self, message):
@@ -71,23 +80,25 @@ class SecureChatClient:
         msg_type = message.get('type')
         
         if msg_type == 'registration_success':
-            print(f"🎉 {message['message']}")
-            
+            if self.gui_callback:
+                self.gui_callback("status", {"message": message['message']})
+                
         elif msg_type == 'key_exchange':
             # Receive peer's public key
             self.peer_username = message['from']
             peer_public_key_pem = message['public_key'].encode('utf-8')
             self.crypto.load_peer_public_key(peer_public_key_pem)
             
-            # Show peer's fingerprint for verification
+            # Get peer's fingerprint for verification
             peer_fingerprint = self.crypto.get_public_key_fingerprint(self.crypto.peer_public_key)
-            print(f"\n🔑 Intercambio de llaves con {self.peer_username}")
-            print(f"🔍 Fingerprint de {self.peer_username}:")
-            print(f"    {peer_fingerprint}")
-            print("⚠️  IMPORTANTE: Verifica este fingerprint con tu contacto por un canal seguro!")
-            print("💬 Escribe 'verify' para confirmar verificación y habilitar el chat seguro")
-            print("📝 O escribe mensajes directamente (sin verificar, bajo tu responsabilidad)")
             
+            # Notify GUI
+            if self.gui_callback:
+                self.gui_callback("key_exchange", {
+                    "peer_name": self.peer_username,
+                    "fingerprint": peer_fingerprint
+                })
+                
         elif msg_type == 'encrypted_message':
             # Decrypt and verify message
             try:
@@ -101,21 +112,26 @@ class SecureChatClient:
                 
                 # Verify signature
                 signature_valid = self.crypto.verify_signature(decrypted_message, signature)
-                signature_indicator = "✅" if signature_valid else "❌"
                 
-                print(f"\n{timestamp.strftime('%H:%M:%S')} {signature_indicator} {sender}: {decrypted_message}")
-                
-                if not signature_valid:
-                    print("⚠️  ADVERTENCIA: Firma digital inválida!")
+                # Notify GUI
+                if self.gui_callback:
+                    self.gui_callback("message", {
+                        "sender": sender,
+                        "message": decrypted_message,
+                        "timestamp": timestamp,
+                        "signature_valid": signature_valid
+                    })
                     
             except Exception as e:
-                print(f"❌ Error procesando mensaje: {e}")
+                if self.gui_callback:
+                    self.gui_callback("error", f"Error procesando mensaje: {e}")
     
     def send_message(self, message):
         """Send encrypted message"""
         if not self.crypto.peer_public_key:
-            print("❌ No se puede enviar mensaje: llave del peer no disponible")
-            return
+            if self.gui_callback:
+                self.gui_callback("error", "No se puede enviar mensaje: llave del peer no disponible")
+            return False
             
         try:
             # Encrypt message
@@ -131,47 +147,21 @@ class SecureChatClient:
             }
             self.socket.send(json.dumps(message_data).encode('utf-8'))
             
-            # Show sent message
-            timestamp = datetime.now().strftime('%H:%M:%S')
-            print(f"{timestamp} ✅ Tú: {message}")
+            return True
             
         except Exception as e:
-            print(f"❌ Error enviando mensaje: {e}")
-    
-    def start_chat(self):
-        """Start main chat loop"""
-        if not self.connected:
-            print("❌ No conectado al servidor")
-            return
-            
-        print("\n💬 Chat iniciado. Esperando intercambio de llaves...")
-        verified = False
-        
-        try:
-            while True:
-                message = input()
-                if message.lower() == 'quit':
-                    break
-                elif message.lower() == 'verify':
-                    if self.peer_username:
-                        verified = True
-                        print("✅ Verificación confirmada. Chat seguro establecido!")
-                        print("💬 Ya puedes enviar mensajes seguros.")
-                    else:
-                        print("❌ No hay peer para verificar aún")
-                elif message.strip():
-                    if not verified and self.peer_username:
-                        print("⚠️  Advertencia: Enviando mensaje sin verificar fingerprint")
-                    self.send_message(message)
-                    
-        except KeyboardInterrupt:
-            print("\n👋 Cerrando chat...")
-        finally:
-            self.disconnect()
+            if self.gui_callback:
+                self.gui_callback("error", f"Error enviando mensaje: {e}")
+            return False
     
     def disconnect(self):
         """Disconnect from server"""
         self.connected = False
         if self.socket:
-            self.socket.close()
-        print("🔌 Desconectado del servidor")
+            try:
+                self.socket.close()
+            except:
+                pass
+        
+        if self.gui_callback:
+            self.gui_callback("status", {"message": "Desconectado del servidor"})
