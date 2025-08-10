@@ -81,16 +81,16 @@ pip install -r requirements.txt
 #### Ejecución de la aplicación GUI
 
 ```bash
-python main_gui.py
+python3 main_gui.py
 ```
 
 #### Flujo de uso con interfaz gráfica:
 
-1. **Iniciar el servidor**: Clic en el botón "🚀 Iniciar Servidor" en la ventana principal
-2. **Conectar primer cliente**: Ingresar nombre de usuario y clic en "🔗 Conectar como Cliente"
+1. **Iniciar el servidor**: Clic en el botón "Iniciar Servidor" en la ventana principal
+2. **Conectar primer cliente**: Ingresar nombre de usuario y clic en "Conectar como Cliente"
 3. **Conectar segundo cliente**: Repetir el proceso en otra instancia de la aplicación
 4. **Verificar identidad**: Cuando aparezca el fingerprint del contacto, verificarlo por un canal seguro independiente
-5. **Confirmar verificación**: Clic en "✅ Verificar Identidad" para establecer el canal seguro
+5. **Confirmar verificación**: Clic en "Verificar Identidad" para establecer el canal seguro
 6. **Comunicación segura**: Enviar mensajes cifrados end-to-end
 
 
@@ -104,9 +104,8 @@ python main_gui.py
 4. **Verificación de Identidad**: Los usuarios verifican los fingerprints SHA-256 a través de un canal seguro alternativo
 5. **Comunicación Cifrada**: Los mensajes se cifran con la llave pública del destinatario y se firman con la llave privada del remitente
 
-### Comandos Disponibles (Terminal)
+### Comandos Disponibles (GUI)
 
-- `verify`: Confirma la verificación del fingerprint del contacto
 - `quit`: Termina la sesión de chat de forma segura
 - Cualquier otro texto: Envía un mensaje cifrado y firmado
 
