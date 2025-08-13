@@ -3,9 +3,17 @@ import socket
 import threading
 import json
 import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SERVER_HOST = os.getenv('HOST', 'localhost')
+SERVER_PORT = int(os.getenv('PORT', 8888))
+
 
 class GUISecureChatServer:
-    def __init__(self, host='localhost', port=8888):
+    def __init__(self, host=SERVER_HOST, port=SERVER_PORT):
         self.host = host
         self.port = port
         self.clients = {}  # {username: socket}
